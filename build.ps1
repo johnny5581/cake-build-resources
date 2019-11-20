@@ -46,6 +46,8 @@ Param(
     [Alias("WhatIf", "Noop")]
     [switch]$DryRun,
     [switch]$SkipToolPackageRestore,
+    [switch]$Major,
+    [switch]$Minor,
     [Parameter(Position=0,Mandatory=$false,ValueFromRemainingArguments=$true)]
     [string[]]$ScriptArgs
 )
@@ -248,6 +250,8 @@ if ($Configuration) { $cakeArguments += "-configuration=$Configuration" }
 if ($Verbosity) { $cakeArguments += "-verbosity=$Verbosity" }
 if ($ShowDescription) { $cakeArguments += "-showdescription" }
 if ($DryRun) { $cakeArguments += "-dryrun" }
+if ($Major) { $cakeArguments += "-major" }
+if ($Minor) { $cakeArguments += "-minor" }
 $cakeArguments += $ScriptArgs
 
 # Start Cake
