@@ -3,14 +3,15 @@
 // user variable setting
 var ID = "";
 var NameSpace = "";
-var Name = "";
+var ProjectName = "";
+var SourceName = "";
 
 // environment variable setting
 var version = Argument("version", "");
 var major = Argument("major", false);
 var minor = Argument("minor", false);
 var saveVersion = Argument("sv", false);
-var name = Argument("name", Name);
+var name = Argument("name", ProjectName);
 var target = Argument("target", "Create-Package");
 var rootNs = Argument("namespace", NameSpace);
 var configuration = Argument("configuration", "Debug");
@@ -148,8 +149,8 @@ void CreatePartialSource(string accessibility)
 }
 void CreatePartialSource(string accessibility, DirectoryPath rootPath) 
 {
-    var compiledFiles = GetFiles("*/**/*.cs");
-    var contentFolder = rootPath.Combine(new DirectoryPath("contentFiles/any/any/Framework"));
+    var compiledFiles = GetFiles("*/**/*.cs", info=>info.Path.FullPath.EndsWith("obj", StringComparison.OrdinalIgnoreCase));
+    var contentFolder = rootPath.Combine(new DirectoryPath($"contentFiles/any/any/{SourceName}"));
     foreach(var file in compiledFiles) 
     {
         if(file.GetFilenameWithoutExtension().FullPath == "AssemblyInfo")
