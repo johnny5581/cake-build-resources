@@ -152,13 +152,14 @@ bool TryGetCurrentVersion(string versionFile, out Version version)
 }
 void CreatePartialSource(string accessibility) 
 {
+    Information("create source: {0}", accessibility);
     var folder = artifactFolder.Combine(new DirectoryPath($".{accessibility}"));
     CreatePartialSource(accessibility, folder);
     CopyFileToDirectory(nuspecFile, folder);
 }
 void CreatePartialSource(string accessibility, DirectoryPath rootPath) 
 {
-    var compiledFiles = GetFiles("*/**/*.cs", info=>!info.Path.FullPath.EndsWith("obj", StringComparison.OrdinalIgnoreCase));
+    var compiledFiles = GetFiles("*/**/*.cs", new GlobberSettings { Predicate = info => !info.Path.FullPath.EndsWith("obj", StringComparison.OrdinalIgnoreCase) });
     var contentFolder = rootPath.Combine(new DirectoryPath($"contentFiles/any/any/{SourceName}"));
     foreach(var file in compiledFiles) 
     {
