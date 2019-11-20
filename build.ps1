@@ -48,6 +48,8 @@ Param(
     [switch]$SkipToolPackageRestore,
     [switch]$Major,
     [switch]$Minor,
+    [string]$Version,
+    [switch]$SaveVersion,
     [Parameter(Position=0,Mandatory=$false,ValueFromRemainingArguments=$true)]
     [string[]]$ScriptArgs
 )
@@ -250,8 +252,10 @@ if ($Configuration) { $cakeArguments += "-configuration=$Configuration" }
 if ($Verbosity) { $cakeArguments += "-verbosity=$Verbosity" }
 if ($ShowDescription) { $cakeArguments += "-showdescription" }
 if ($DryRun) { $cakeArguments += "-dryrun" }
+if ($Version) { $cakeArguments += "-version=$Version" }
 if ($Major) { $cakeArguments += "-major" }
 if ($Minor) { $cakeArguments += "-minor" }
+if ($SaveVersion) { $cakeArguments += "-sv" }
 $cakeArguments += $ScriptArgs
 
 # Start Cake
