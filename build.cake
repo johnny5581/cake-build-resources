@@ -149,7 +149,7 @@ void CreatePartialSource(string accessibility)
 }
 void CreatePartialSource(string accessibility, DirectoryPath rootPath) 
 {
-    var compiledFiles = GetFiles("*/**/*.cs", info=>info.Path.FullPath.EndsWith("obj", StringComparison.OrdinalIgnoreCase));
+    var compiledFiles = GetFiles("*/**/*.cs", info=>!info.Path.FullPath.EndsWith("obj", StringComparison.OrdinalIgnoreCase));
     var contentFolder = rootPath.Combine(new DirectoryPath($"contentFiles/any/any/{SourceName}"));
     foreach(var file in compiledFiles) 
     {
