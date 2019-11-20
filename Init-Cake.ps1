@@ -4,13 +4,23 @@
 # Date   : 2019-11-20
 # Desc   : init cake build.ps1
 # ================================================
-
+[CmdletBinding()]
 Param (
     [string]$Path = '', 
     [switch]$Force = $False,
     [string]$Resource = 'default',
-    [switch]$CakeScript
+    [switch]$Constants
 )
+
+Function Download-File {
+    [CmdletBinding()]
+    Param (
+        [string]$Url,
+        [string]$OutputFile
+    )    
+    Write-Host "Download build.ps1 from '$Url' to '$OutputFile'"
+    Invoke-WebRequest $Url -OutFile "$OutputFile"
+}
 
 If($Path -eq '' -and $Force -eq $False) {
     $Path = $(Read-Host 'Project Path')
@@ -30,13 +40,9 @@ $Resource = Switch($Resource.ToLower()) {
     'official' { 'https://cakebuild.net/download/bootstrapper/windows'; break }
     Default { $Resource ; break}
 }
-$outputFile = "$Path\build.ps1"
-Write-Host "Download build.ps1 from '$Resource' to '$outputFile'"
-Invoke-WebRequest $Resource -OutFile "$outputFile"
-
-If($CakeScript) {
-    $cakeScriptUrl = 'https://raw.githubusercontent.com/johnny5581/cake-build-resources/master/build.cake'
-    $outputFile = "$Path\build.cake"
-    Write-Host "Download build.cake from '$cakeScriptUrl' to '$outputFile'"
-    Invoke-WebRequest $cakeScriptUrl -OutFile "$outputFile"
+Download-File -Url "$Resource" -OutputFile "$Path\build.ps1"
+Download-File -Url 'https://raw.githubusercontent.com/johnny5581/cake-build-resources/master/build.cake' -OutputFile "$Path\build.cake"
+if($Constants) {
+    Download-File -Url 'https://raw.githubusercontent.com/johnny5581/cake-build-resources/master/variables.cake' -OutputFile "$Path\variables.cake"
 }
+

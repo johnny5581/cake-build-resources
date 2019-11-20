@@ -1,10 +1,13 @@
 #addin "nuget:?package=Cake.FileHelpers&version=3.2.1"
 
+#load "variables.cake"
+
+
 // user variable setting
-var ID = "";
-var NameSpace = "";
-var ProjectName = "";
-var SourceName = "";
+var ID = GetText(_id, "");
+var NameSpace = GetText(_nameSpace, "");
+var ProjectName = GetText(_projectName, "");
+var SourceName = GetText(_sourceName, "");
 
 // environment variable setting
 var version = Argument("version", "");
@@ -119,6 +122,12 @@ Task("Create-Package")
 
 
 RunTarget(target);
+
+string GetText(string text, string defaultText) {
+    if(string.IsNullOrEmpty(text))
+        return defaultText;
+    return text;
+}
 
 string ReadText(string file, string defaultText = null) 
 {
