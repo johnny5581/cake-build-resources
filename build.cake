@@ -154,7 +154,7 @@ IEnumerable<FilePath> RecursiveGetFile(
     }
 }
 
-List<FilePath> RecursiveGetFile(directoryPath directoryPath, string filter, Func<string, bool> predicate = null)
+List<FilePath> RecursiveGetFile(DirectoryPath directoryPath, string filter, Func<string, bool> predicate = null)
 {
     if(predicate == null)
         predicate = path => true;
