@@ -8,6 +8,9 @@ var ID = GetText(_id, "");
 var NameSpace = GetText(_nameSpace, "");
 var ProjectName = GetText(_projectName, "");
 var SourceName = GetText(_sourceName, "");
+var ExcludeFileNames = _excludeFileNames;
+var IncludeFileExtensions = _includeFileExtensions;
+
 
 // environment variable setting
 var version = Argument("version", "");
@@ -40,6 +43,12 @@ var debugVersionFile = "debug.version";
 string autoVersionText = null;
 string semVerText = null;
 var isBeta = configuration == "Debug";
+var settings = new GlobberSettings {
+    Predicate = DirectoryPredicate,
+    //FilePredicate = FilePredicate
+};
+
+
 
 Task("Get-Version")
     .Description("get currect version for package")
@@ -123,6 +132,35 @@ Task("Create-Package")
 
 RunTarget(target);
 
+
+IEnumerable<FilePath> RecursiveGetFile(
+    ICakeContext context,
+    DirectoryPath directoryPath,
+    string filter,
+    Func<string, bool> predicate
+    )
+{
+    var directory = context.FileSystem.GetDirectory(context.MakeAbsolute(directoryPath));
+    foreach(var file in directory.GetFiles(filter, SearchScope.Current))
+    {
+        yield return file.Path;
+    }
+    foreach(var file in directory.GetDirectories("*.*", SearchScope.Current)
+        .Where(dir=>predicate(dir.Path.FullPath))
+        .SelectMany(childDirectory=>RecursiveGetFile(context, childDirectory.Path, filter, predicate))
+        )
+    {
+        yield return file;
+    }
+}
+
+List<FilePath> RecursiveGetFile(directoryPath directoryPath, string filter, Func<string, bool> predicate = null)
+{
+    if(predicate == null)
+        predicate = path => true;
+    return RecursiveGetFile(Context, directoryPath, filter, predicate).ToList();
+}
+
 string GetText(string text, string defaultText) {
     if(string.IsNullOrEmpty(text))
         return defaultText;
@@ -157,14 +195,23 @@ void CreatePartialSource(string accessibility)
     CreatePartialSource(accessibility, folder);
     CopyFileToDirectory(nuspecFile, folder);
 }
+
 void CreatePartialSource(string accessibility, DirectoryPath rootPath) 
-{
-    var compiledFiles = GetFiles("*/**/*.cs", new GlobberSettings { Predicate = info => !info.Path.FullPath.EndsWith("obj", StringComparison.OrdinalIgnoreCase) });
+{            
     var contentFolder = rootPath.Combine(new DirectoryPath($"contentFiles/any/any/{SourceName}"));
-    foreach(var file in compiledFiles) 
+    CreateCompiledSource(accessibility, contentFolder);
+    foreach(var extension in IncludeFileExtensions) {
+        CreateResources(contentFolder, extension);
+    }
+    
+}
+
+void CreateCompiledSource(string accessibility, DirectoryPath contentFolder) 
+{    
+    var files = RecursiveGetFile(projectFolder, "*.cs", DirectionaryPredicate);
+    Information("creating source code...{0}", files.Count());
+    foreach(var file in files) 
     {
-        if(file.GetFilenameWithoutExtension().FullPath == "AssemblyInfo")
-            continue;
         var relativePath = projectFolder.GetRelativePath(file);
         var ppPath = contentFolder.CombineWithFilePath(relativePath).AppendExtension(".pp");
         Information("Convert file '{0}' to '{1}'", relativePath, ppPath);        
@@ -186,6 +233,26 @@ void CreatePartialSource(string accessibility, DirectoryPath rootPath)
         FileWriteLines(ppPath, lines);
     }        
 }
+
+void CreateResources(DirectoryPath contentFolder, string extension) 
+{    
+    var files = RecursiveGetFile(projectFolder, $"*.{extension}", DirectionaryPredicate);
+    Information("creating resource '{0}'...{1}", extension, files.Count());
+    foreach(var file in files) 
+    {
+        var relativePath = projectFolder.GetRelativePath(file);
+        var path = contentFolder.CombineWithFilePath(relativePath);
+        Information("Copy file '{0}' to '{1}'", relativePath, path);        
+        EnsureDirectoryExists(path.GetDirectory());
+        CopyFile(file, path);
+    }
+}
+
+bool DirectionaryPredicate(string path) 
+{
+    return !path.EndsWith("obj", StringComparison.OrdinalIgnoreCase);
+}
+
 void CreatePackage(string accessibility) 
 {
     var folder = artifactFolder.Combine(new DirectoryPath($".{accessibility}"));
