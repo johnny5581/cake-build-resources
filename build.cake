@@ -44,6 +44,25 @@ string autoVersionText = null;
 string semVerText = null;
 var isBeta = configuration == "Debug";
 
+Task("Clean")
+    .Description("clean project")
+    .Does(()=>
+    {
+        Information("cleaning {0}", projectFolder);
+        CleanDirectories("./**/bin");
+        CleanDirectories("./**/obj");
+    });
+
+Task("Build")
+    .Description("build project")
+    .IsDependentOn("Clean")
+    .Does(()=> 
+    {
+        Information("building {0}", projectFilePath);
+        MSBuild(projectFilePath, settings=> 
+            settings.SetConfiguration(configuration)
+                    .SetPlatformTarget(PlatformTarget.MSIL));
+    });
 
 Task("Get-Version")
     .Description("get currect version for package")
