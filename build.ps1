@@ -54,6 +54,9 @@ Param(
     [string[]]$ScriptArgs
 )
 
+# Change location to script location.
+Push-Location = $PSScriptRoot
+
 # Attempt to set highest encryption available for SecurityProtocol.
 # PowerShell will not set this by default (until maybe .NET 4.6.x). This
 # will typically produce a message for PowerShell v2 (just an info
@@ -261,4 +264,8 @@ $cakeArguments += $ScriptArgs
 # Start Cake
 Write-Host "Running build script..."
 Invoke-Expression "& $CAKE_EXE_INVOCATION $($cakeArguments -join " ")"
+
+# Restore location information
+Pop-Location
+
 exit $LASTEXITCODE
