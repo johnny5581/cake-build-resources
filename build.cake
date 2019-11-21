@@ -43,11 +43,6 @@ var debugVersionFile = "debug.version";
 string autoVersionText = null;
 string semVerText = null;
 var isBeta = configuration == "Debug";
-var settings = new GlobberSettings {
-    Predicate = DirectoryPredicate,
-    //FilePredicate = FilePredicate
-};
-
 
 
 Task("Get-Version")
