@@ -10,6 +10,7 @@ var ProjectName = GetText(_projectName, "");
 var SourceName = GetText(_sourceName, "");
 var ExcludeFileNames = _excludeFileNames;
 var IncludeFileExtensions = _includeFileExtensions;
+var Targets = _targets;
 
 
 // environment variable setting
@@ -44,25 +45,6 @@ string autoVersionText = null;
 string semVerText = null;
 var isBeta = configuration == "Debug";
 
-Task("Clean")
-    .Description("clean project")
-    .Does(()=>
-    {
-        Information("cleaning {0}", projectFolder);
-        CleanDirectories("./**/bin");
-        CleanDirectories("./**/obj");
-    });
-
-Task("Build")
-    .Description("build project")
-    .IsDependentOn("Clean")
-    .Does(()=> 
-    {
-        Information("building {0}", projectFilePath);
-        MSBuild(projectFilePath, settings=> 
-            settings.SetConfiguration(configuration)
-                    .SetPlatformTarget(PlatformTarget.MSIL));
-    });
 
 Task("Get-Version")
     .Description("get currect version for package")
@@ -212,16 +194,99 @@ void CreatePartialSource(string accessibility)
 
 void CreatePartialSource(string accessibility, DirectoryPath rootPath) 
 {            
-    var contentFolder = rootPath.Combine(new DirectoryPath($"contentFiles/any/any/{SourceName}"));
-    CreateCompiledSource(accessibility, contentFolder);
-    foreach(var extension in IncludeFileExtensions) {
-        CreateResources(contentFolder, extension);
+    if(Targets.Length > 1) 
+    {
+        var targets = Targets.ToDictionary(r=>r, r=>rootPath.Combine(new DirectoryPath($"contentFiles/{r.ToLower()}/{SourceName}")));
+        CreateMultiCompiledSource(accessibility, targets);
+        foreach(var extension in IncludeFileExtensions) {
+            CreateMultiResources(targets, extension);
+        }
     }
-    
+    else 
+    {
+        var contentFolder = rootPath.Combine(new DirectoryPath($"contentFiles/any/{SourceName}"));
+        CreateCompiledSource(accessibility, contentFolder);
+        foreach(var extension in IncludeFileExtensions) {
+            CreateResources(contentFolder, extension);
+        }
+    }
+}
+void CreateMultiCompiledSource(string accessibility, Dictionary<string, DirectoryPath> ppRootPaths) 
+{    
+    var files = RecursiveGetFile(projectFolder, "*.cs", DirectionaryPredicate);
+    Information("creating source code...{0}", files.Count());
+    foreach(var file in files) 
+    {
+        var writeableMap = ppRootPaths.ToDictionary(r=>r.Key, r=>true);
+        var relativePath = projectFolder.GetRelativePath(file).AppendExtension(".pp");        
+        Information("Convert file '{0}'", relativePath);        
+        var ppPaths = ppRootPaths.ToDictionary(r=>r.Key, r=>r.Value.CombineWithFilePath(relativePath));
+        
+        var lines = FileReadLines(file);
+        var linesMap = ppRootPaths.ToDictionary(r=>r.Key, r=>new List<string>());
+        for(var lineNum = 0; lineNum < lines.Length; lineNum++)
+        {            
+            var trimLine = lines[lineNum].TrimStart();
+            if(trimLine.StartsWith("#if") || trimLine.StartsWith("#elif")) 
+            {
+                foreach(var key in Targets)
+                    writeableMap[key] = ContainsTarget(trimLine, key);
+                continue;
+            }
+            else if(trimLine.StartsWith("#else"))
+            {
+                foreach(var key in Targets)
+                    writeableMap[key] = !writeableMap[key];
+                continue;
+            }
+            else if(trimLine.StartsWith("#endif"))
+            {
+                foreach(var key in Targets)
+                    writeableMap[key] = true;
+                continue;
+            }
+            else if(trimLine.StartsWith("[Accessibility"))
+            {                
+                var newLine = lines[lineNum + 1].Replace("public", accessibility);
+                lines[++lineNum] = newLine;
+            }
+            else if(trimLine.StartsWith("namespace ")) 
+            {
+                lines[lineNum] = lines[lineNum].Replace(rootNs, "$rootnamespace$");
+            }
+                    
+            var writeKeys = writeableMap.Where(kv=>kv.Value).Select(kv=>kv.Key).ToArray();
+            foreach(var key in writeKeys) 
+            {
+                var line = lines[lineNum];
+                linesMap[key].Add(line);
+            }
+        }
+        foreach(var ppPathKv in ppPaths) 
+        {
+            var ppPath = ppPathKv.Value;            
+            var contentLines = linesMap[ppPathKv.Key].ToArray(); 
+            EnsureDirectoryExists(ppPath.GetDirectory());       
+            FileWriteLines(ppPath, contentLines);            
+        }        
+    }        
 }
 
+bool ContainsTarget(string line, string target) 
+{
+    line = line.ToUpper();
+    target = target.ToUpper();
+    var index = line.IndexOf(target);
+    if(index == -1)
+        return false;
+    var inverseChar = line[index - 1];
+    if(inverseChar == '!')
+        return false;
+    return true;
+}
 void CreateCompiledSource(string accessibility, DirectoryPath contentFolder) 
 {    
+    
     var files = RecursiveGetFile(projectFolder, "*.cs", DirectionaryPredicate);
     Information("creating source code...{0}", files.Count());
     foreach(var file in files) 
@@ -233,19 +298,32 @@ void CreateCompiledSource(string accessibility, DirectoryPath contentFolder)
         var lines = FileReadLines(file);
         for(var lineNum = 0; lineNum < lines.Length; lineNum++)
         {
-            var line = lines[lineNum].Trim();
-            if(line.StartsWith("[Accessibility"))
+            var line = lines[lineNum];
+            var trimLine = line.TrimStart();
+            if(trimLine.StartsWith("[Accessibility"))
             {
                 var newLine = lines[lineNum + 1].Replace("public", accessibility);
                 lines[++lineNum] = newLine;
             }
-            else if(line.StartsWith("namespace ")) 
+            else if(trimLine.StartsWith("namespace ")) 
             {
                 lines[lineNum] = lines[lineNum].Replace(rootNs, "$rootnamespace$");
-            }                
+            }
         }
         FileWriteLines(ppPath, lines);
     }        
+}
+void FileWriteLine(FilePath path, string line) 
+{
+    FileWriteText(path, line);
+    FileWriteText(path, Environment.NewLine);
+}
+void FileWriteLine(IEnumerable<FilePath> paths, string line) 
+{
+    foreach(var path in paths) 
+    {
+        FileWriteLine(path, line);
+    }
 }
 
 void CreateResources(DirectoryPath contentFolder, string extension) 
@@ -261,7 +339,22 @@ void CreateResources(DirectoryPath contentFolder, string extension)
         CopyFile(file, path);
     }
 }
-
+void CreateMultiResources(Dictionary<string, DirectoryPath> ppRootPaths, string extension) 
+{    
+    var files = RecursiveGetFile(projectFolder, $"*.{extension}", DirectionaryPredicate);
+    Information("creating resource '{0}'...{1}", extension, files.Count());
+    foreach(var file in files) 
+    {
+        var relativePath = projectFolder.GetRelativePath(file);        
+        Information("Copy file '{0}'", relativePath);        
+        var paths = ppRootPaths.Values.Select(r=>r.CombineWithFilePath(relativePath));
+        foreach(var path in paths) 
+        {
+            EnsureDirectoryExists(path.GetDirectory());
+            CopyFile(file, path);
+        }
+    }
+}
 bool DirectionaryPredicate(string path) 
 {
     return !path.EndsWith("obj", StringComparison.OrdinalIgnoreCase);

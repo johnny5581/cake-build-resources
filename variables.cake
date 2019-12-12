@@ -4,3 +4,4 @@ var _projectName = "";
 var _sourceName = "";
 string[] _excludeFileNames = { "AssemblyInfo.cs" };
 string[] _includeFileExtensions = {  };
+string[] _targets = {  };
