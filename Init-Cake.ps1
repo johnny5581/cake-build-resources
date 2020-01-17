@@ -9,7 +9,6 @@ Param (
     [string]$Path = '', 
     [switch]$Force = $False,
     [string]$Resource = 'default',
-    [switch]$Constants
 )
 
 Function Download-File {
@@ -42,7 +41,4 @@ $Resource = Switch($Resource.ToLower()) {
 }
 Download-File -Url "$Resource" -OutputFile "$Path\build.ps1"
 Download-File -Url 'https://raw.githubusercontent.com/johnny5581/cake-build-resources/master/build.cake' -OutputFile "$Path\build.cake"
-if($Constants) {
-    Download-File -Url 'https://raw.githubusercontent.com/johnny5581/cake-build-resources/master/variables.cake' -OutputFile "$Path\variables.cake"
-}
 

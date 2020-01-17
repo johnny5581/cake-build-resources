@@ -45,11 +45,7 @@ Param(
     [switch]$ShowDescription,
     [Alias("WhatIf", "Noop")]
     [switch]$DryRun,
-    [switch]$SkipToolPackageRestore,
-    [switch]$Major,
-    [switch]$Minor,
-    [string]$Version,
-    [switch]$SaveVersion,
+    [switch]$SkipToolPackageRestore,    
     [Parameter(Position=0,Mandatory=$false,ValueFromRemainingArguments=$true)]
     [string[]]$ScriptArgs
 )
@@ -255,15 +251,11 @@ if ($Configuration) { $cakeArguments += "-configuration=$Configuration" }
 if ($Verbosity) { $cakeArguments += "-verbosity=$Verbosity" }
 if ($ShowDescription) { $cakeArguments += "-showdescription" }
 if ($DryRun) { $cakeArguments += "-dryrun" }
-if ($Version) { $cakeArguments += "-version=$Version" }
-if ($Major) { $cakeArguments += "-major" }
-if ($Minor) { $cakeArguments += "-minor" }
-if ($SaveVersion) { $cakeArguments += "-sv" }
 $cakeArguments += $ScriptArgs
 
 # Start Cake
 Write-Host "Running build script..."
-Invoke-Expression "& $CAKE_EXE_INVOCATION $($cakeArguments -join " ")"
+Invoke-Expression "& $CAKE_EXE_INVOCATION $($cakeArguments -join " ")" 
 
 # Restore location information
 Pop-Location
